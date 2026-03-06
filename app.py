@@ -1,12 +1,12 @@
 """
-app.py — InterviewIQ | Production-grade Streamlit Application
+app.py — InterviewIQ
+Clean build: no voice module, hint bug fixed, full legibility + theme consistency.
 """
 
 import os
 import streamlit as st
 import time
 
-# ── .env loading (local dev) ──────────────────────────────────────────────────
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -50,375 +50,484 @@ st.set_page_config(
 )
 
 # ══════════════════════════════════════════════════════════════════════════════
-# DESIGN SYSTEM
-# Aesthetic: Editorial/Terminal hybrid. Monochrome base with electric teal.
-# Fonts: "Instrument Serif" for headings (editorial weight), "JetBrains Mono"
-#        for body (developer-grade legibility). Feels like a Bloomberg terminal
-#        crossed with a design agency portfolio.
-# ══════════════════════════════════════════════════════════════════════════════
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
-
-/* ── Reset & Base ─────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body, [class*="css"], .stApp {
-    background-color: #080A0F !important;
-    color: #C8CDD8 !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 14px;
-}
-
-/* ── Hide Streamlit chrome ────────────────────────── */
-#MainMenu, footer, header,
-[data-testid="stToolbar"],
-[data-testid="stDecoration"],
-[data-testid="collapsedControl"] { display: none !important; }
-
-/* ── Layout ───────────────────────────────────────── */
-.block-container {
-    max-width: 1100px !important;
-    padding: 3rem 2rem 4rem !important;
-}
-section[data-testid="stSidebar"] { display: none !important; }
-
-/* ── Typography ───────────────────────────────────── */
-h1, h2 {
-    font-family: 'Instrument Serif', serif !important;
-    color: #F0F2F7 !important;
-    font-weight: 400 !important;
-    letter-spacing: -0.02em;
-}
-h3, h4 {
-    font-family: 'JetBrains Mono', monospace !important;
-    color: #E0E4EF !important;
-    font-weight: 500 !important;
-    font-size: 0.85rem !important;
-    letter-spacing: 0.08em !important;
-    text-transform: uppercase !important;
-}
-
-/* ── Horizontal rule ──────────────────────────────── */
-hr { border: none; border-top: 1px solid #161B28 !important; margin: 2rem 0; }
-
-/* ── Cards ────────────────────────────────────────── */
-.iq-card {
-    background: #0D1119;
-    border: 1px solid #1A2035;
-    border-radius: 4px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    transition: border-color 0.2s ease;
-}
-.iq-card:hover { border-color: #2A3555; }
-.iq-card-accent { border-left: 2px solid #00E5B4 !important; }
-.iq-card-warn   { border-left: 2px solid #F5A623 !important; }
-.iq-card-danger { border-left: 2px solid #FF5252 !important; }
-
-/* ── Chat bubbles ─────────────────────────────────── */
-.bubble-wrap { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
-
-.bubble-bot {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-    max-width: 82%;
-}
-.bubble-bot-avatar {
-    width: 30px; height: 30px;
-    background: #00E5B4;
-    border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-.bubble-bot-body {
-    background: #0D1119;
-    border: 1px solid #1A2035;
-    border-radius: 0 6px 6px 6px;
-    padding: 1rem 1.25rem;
-    line-height: 1.7;
-    font-size: 0.9rem;
-    color: #D4D9E8;
-}
-
-.bubble-user {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-    max-width: 82%;
-    margin-left: auto;
-    flex-direction: row-reverse;
-}
-.bubble-user-avatar {
-    width: 30px; height: 30px;
-    background: #1E2840;
-    border: 1px solid #2A3555;
-    border-radius: 2px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-.bubble-user-body {
-    background: #111827;
-    border: 1px solid #1E2840;
-    border-radius: 6px 0 6px 6px;
-    padding: 1rem 1.25rem;
-    line-height: 1.7;
-    font-size: 0.9rem;
-    color: #C8CDD8;
-    text-align: right;
-}
-
-.feedback-card {
-    background: #080D15;
-    border: 1px solid #00E5B430;
-    border-radius: 4px;
-    padding: 1.1rem 1.4rem;
-    margin-top: 0.5rem;
-    line-height: 1.8;
-    font-size: 0.875rem;
-    color: #A8B4CC;
-}
-
-/* ── Pills & badges ───────────────────────────────── */
-.pill {
-    display: inline-flex; align-items: center;
-    padding: 0.25rem 0.75rem;
-    border-radius: 2px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    margin: 0.15rem;
-    border: 1px solid;
-}
-.pill-green  { color: #00E5B4; border-color: #00E5B440; background: #00E5B40D; }
-.pill-amber  { color: #F5A623; border-color: #F5A62340; background: #F5A6230D; }
-.pill-red    { color: #FF5252; border-color: #FF525240; background: #FF52520D; }
-.pill-blue   { color: #6B9FFF; border-color: #6B9FFF40; background: #6B9FFF0D; }
-
-/* ── Score badge ──────────────────────────────────── */
-.score-hero {
-    font-family: 'Instrument Serif', serif;
-    font-size: 5rem;
-    color: #00E5B4;
-    line-height: 1;
-    font-weight: 400;
-}
-.score-label {
-    font-size: 0.7rem;
-    letter-spacing: 0.15em;
-    text-transform: uppercase;
-    color: #4A5568;
-    margin-top: 0.3rem;
-}
-
-/* ── Progress bar ─────────────────────────────────── */
-.stProgress > div > div > div > div {
-    background: linear-gradient(90deg, #00E5B4, #00B4E5) !important;
-    border-radius: 0 !important;
-}
-.stProgress > div > div {
-    background: #1A2035 !important;
-    border-radius: 0 !important;
-    height: 3px !important;
-}
-
-/* ── Streamlit native inputs ──────────────────────── */
-.stTextInput > div > div > input,
-.stTextArea > div > div > textarea,
-.stSelectbox > div > div {
-    background: #0D1119 !important;
-    border: 1px solid #1A2035 !important;
-    border-radius: 4px !important;
-    color: #C8CDD8 !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 13px !important;
-}
-.stTextInput > div > div > input:focus,
-.stTextArea > div > div > textarea:focus {
-    border-color: #00E5B4 !important;
-    box-shadow: 0 0 0 1px #00E5B420 !important;
-}
-[data-baseweb="select"] > div {
-    background: #0D1119 !important;
-    border-color: #1A2035 !important;
-}
-.stFileUploader > div {
-    background: #0D1119 !important;
-    border: 1px dashed #1A2035 !important;
-    border-radius: 4px !important;
-}
-.stFileUploader > div:hover { border-color: #00E5B4 !important; }
-.stSlider > div > div > div > div { background: #00E5B4 !important; }
-
-/* ── Buttons ──────────────────────────────────────── */
-.stButton > button {
-    background: transparent !important;
-    border: 1px solid #1A2035 !important;
-    color: #8892A4 !important;
-    border-radius: 4px !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 12px !important;
-    letter-spacing: 0.04em !important;
-    padding: 0.5rem 1rem !important;
-    transition: all 0.15s ease !important;
-    font-weight: 400 !important;
-}
-.stButton > button:hover {
-    border-color: #00E5B4 !important;
-    color: #00E5B4 !important;
-    background: #00E5B408 !important;
-}
-
-/* Primary CTA button */
-.btn-primary > button {
-    background: #00E5B4 !important;
-    border: 1px solid #00E5B4 !important;
-    color: #080A0F !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.06em !important;
-}
-.btn-primary > button:hover {
-    background: #00CCА0 !important;
-    color: #080A0F !important;
-    border-color: #00CCА0 !important;
-}
-
-/* Danger button */
-.btn-danger > button {
-    border-color: #FF525230 !important;
-    color: #FF5252 !important;
-}
-.btn-danger > button:hover {
-    border-color: #FF5252 !important;
-    background: #FF52520D !important;
-    color: #FF5252 !important;
-}
-
-/* ── Radio buttons ────────────────────────────────── */
-.stRadio > div { gap: 0.5rem !important; }
-.stRadio > div > label {
-    background: #0D1119;
-    border: 1px solid #1A2035;
-    border-radius: 4px;
-    padding: 0.6rem 1rem !important;
-    transition: all 0.15s ease;
-    cursor: pointer;
-    font-size: 13px !important;
-}
-.stRadio > div > label:hover { border-color: #2A3555; }
-
-/* ── Expander ─────────────────────────────────────── */
-[data-testid="stExpander"] {
-    background: #0D1119 !important;
-    border: 1px solid #1A2035 !important;
-    border-radius: 4px !important;
-}
-[data-testid="stExpander"]:hover { border-color: #2A3555 !important; }
-
-/* ── Metric ───────────────────────────────────────── */
-[data-testid="stMetricValue"] {
-    font-family: 'Instrument Serif', serif !important;
-    color: #F0F2F7 !important;
-    font-size: 2rem !important;
-}
-[data-testid="stMetricLabel"] { color: #4A5568 !important; font-size: 0.7rem !important; }
-
-/* ── Topic card ───────────────────────────────────── */
-.topic-card {
-    background: #0D1119;
-    border: 1px solid #1A2035;
-    border-radius: 4px;
-    padding: 1.4rem 1rem;
-    text-align: center;
-    transition: all 0.2s ease;
-    cursor: pointer;
-}
-.topic-card:hover {
-    border-color: #00E5B4;
-    background: #00E5B408;
-}
-.topic-number {
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: #00E5B4;
-    text-transform: uppercase;
-    margin-bottom: 0.4rem;
-}
-.topic-name {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #D4D9E8;
-}
-
-/* ── Watermark / logo ─────────────────────────────── */
-.iq-logo {
-    font-family: 'Instrument Serif', serif;
-    font-size: 1.1rem;
-    color: #2A3555;
-    letter-spacing: 0.02em;
-}
-.iq-logo span { color: #00E5B4; }
-
-/* ── Step indicator ───────────────────────────────── */
-.step-bar {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 2.5rem;
-}
-.step-dot {
-    height: 3px;
-    flex: 1;
-    border-radius: 0;
-    background: #1A2035;
-    transition: background 0.3s ease;
-}
-.step-dot.active { background: #00E5B4; }
-.step-dot.done   { background: #004D3F; }
-
-/* ── Scrollbar ────────────────────────────────────── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: #080A0F; }
-::-webkit-scrollbar-thumb { background: #1A2035; border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: #2A3555; }
-
-/* ── Chat input ───────────────────────────────────── */
-[data-testid="stChatInput"] {
-    border-top: 1px solid #1A2035 !important;
-    background: #080A0F !important;
-}
-[data-testid="stChatInput"] > div {
-    background: #0D1119 !important;
-    border: 1px solid #1A2035 !important;
-    border-radius: 4px !important;
-}
-[data-testid="stChatInputSubmitButton"] > button {
-    background: #00E5B4 !important;
-    border: none !important;
-    color: #080A0F !important;
-}
-
-/* ── Spinner ──────────────────────────────────────── */
-.stSpinner > div { border-top-color: #00E5B4 !important; }
-
-/* ── Success / Error / Info ───────────────────────── */
-.stSuccess, .stInfo, .stWarning, .stError {
-    border-radius: 4px !important;
-    font-size: 0.85rem !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# INIT
+# SESSION + THEME INIT
 # ══════════════════════════════════════════════════════════════════════════════
 init_session()
 
-# ── API key: .env → st.secrets → stop ────────────────────────────────────────
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+T = st.session_state.theme   # "dark" | "light"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DESIGN TOKENS
+# Every colour in the app is sourced from here — no hardcoded hex anywhere else.
+# ══════════════════════════════════════════════════════════════════════════════
+if T == "dark":
+    BG          = "#07090E"
+    BG_CARD     = "#0D1220"
+    BG_INPUT    = "#0D1220"
+    BG_BOT      = "#0D1220"
+    BG_USER     = "#111B2E"
+    BORDER      = "#1C2840"
+    BORDER_HI   = "#2C3F60"
+    TEXT_HEAD   = "#F0F3FC"
+    TEXT_BODY   = "#C2CEDF"
+    TEXT_SUB    = "#728096"
+    TEXT_MUTED  = "#334055"
+    ACCENT      = "#00E5B4"
+    WARN        = "#F5A623"
+    DANGER      = "#FF5555"
+    INFO        = "#6B9FFF"
+    SCROLLBAR   = "#1C2840"
+    BTN_BG      = "#0D1220"
+    BTN_TEXT    = "#C2CEDF"
+    LOGO_BASE   = "#728096"
+    STEP_DONE   = "#003D2F"
+    RADIO_BG    = "#0D1220"
+else:
+    BG          = "#F0F2F8"
+    BG_CARD     = "#FFFFFF"
+    BG_INPUT    = "#FFFFFF"
+    BG_BOT      = "#FFFFFF"
+    BG_USER     = "#E8EEFF"
+    BORDER      = "#C8D4E8"
+    BORDER_HI   = "#8FA8CC"
+    TEXT_HEAD   = "#080E22"
+    TEXT_BODY   = "#18253D"
+    TEXT_SUB    = "#3D5270"
+    TEXT_MUTED  = "#8FA8C0"
+    ACCENT      = "#007A5E"
+    WARN        = "#8A4A00"
+    DANGER      = "#A8101C"
+    INFO        = "#1A3E8A"
+    SCROLLBAR   = "#C8D4E8"
+    BTN_BG      = "#FFFFFF"
+    BTN_TEXT    = "#18253D"
+    LOGO_BASE   = "#8FA8C0"
+    STEP_DONE   = "#A8E8D8"
+    RADIO_BG    = "#FFFFFF"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CSS
+# Uses !important pervasively to override Streamlit's own stylesheet.
+# Covers every surface that Streamlit renders: native widgets, markdown,
+# chat input, expanders, metrics, alerts — so theme switching is complete.
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+/* ── Global reset ─────────────────────────────────────────────── */
+*, *::before, *::after {{ box-sizing: border-box; }}
+
+html, body, .stApp, [class*="css"],
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stVerticalBlock"],
+[data-testid="stHorizontalBlock"],
+[data-testid="column"],
+.main, .element-container {{
+    background-color: {BG} !important;
+    color: {TEXT_BODY} !important;
+    font-family: 'JetBrains Mono', monospace !important;
+}}
+
+/* ── Hide Streamlit chrome ────────────────────────────────────── */
+#MainMenu, footer, header,
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="collapsedControl"],
+section[data-testid="stSidebar"] {{ display: none !important; }}
+
+/* ── Layout ───────────────────────────────────────────────────── */
+.block-container {{
+    max-width: 1120px !important;
+    padding: 2.5rem 2.5rem 5rem !important;
+    background-color: {BG} !important;
+}}
+
+/* ── All text elements ────────────────────────────────────────── */
+p, span, div, li, td, th, label, caption, small,
+[data-testid="stText"],
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] span,
+[data-testid="stMarkdownContainer"] li {{
+    color: {TEXT_BODY} !important;
+}}
+
+/* ── Headings ─────────────────────────────────────────────────── */
+h1, h2,
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2 {{
+    font-family: 'Instrument Serif', serif !important;
+    color: {TEXT_HEAD} !important;
+    font-weight: 400 !important;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+}}
+h3, h4,
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stMarkdownContainer"] h4 {{
+    font-family: 'JetBrains Mono', monospace !important;
+    color: {TEXT_HEAD} !important;
+    font-weight: 600 !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+}}
+.stCaption, [data-testid="stCaption"],
+[data-testid="stCaptionContainer"] {{
+    color: {TEXT_SUB} !important;
+    font-size: 0.74rem !important;
+}}
+
+/* ── HR ───────────────────────────────────────────────────────── */
+hr {{ border: none !important; border-top: 1px solid {BORDER} !important; margin: 1.75rem 0; }}
+
+/* ── Cards (custom) ───────────────────────────────────────────── */
+.iq-card {{
+    background: {BG_CARD} !important;
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 1.4rem 1.6rem;
+    margin-bottom: 1rem;
+    color: {TEXT_BODY} !important;
+    transition: border-color 0.2s ease;
+}}
+.iq-card * {{ color: inherit; }}
+.iq-card:hover {{ border-color: {BORDER_HI}; }}
+.iq-card-accent {{ border-left: 3px solid {ACCENT} !important; }}
+.iq-card-warn   {{ border-left: 3px solid {WARN}   !important; }}
+.iq-card-danger {{ border-left: 3px solid {DANGER} !important; }}
+
+/* ── Chat bubbles ─────────────────────────────────────────────── */
+.bubble-wrap {{ display:flex; flex-direction:column; gap:1.25rem; margin-bottom:1.5rem; }}
+
+.bubble-bot {{ display:flex; gap:0.875rem; align-items:flex-start; max-width:84%; }}
+.bubble-bot-avatar {{
+    width:32px; height:32px; min-width:32px;
+    background:{ACCENT}; color:{BG};
+    border-radius:4px; flex-shrink:0; margin-top:2px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; letter-spacing:0.04em;
+}}
+.bubble-bot-body {{
+    background:{BG_BOT}; border:1px solid {BORDER};
+    border-radius:2px 8px 8px 8px;
+    padding:1rem 1.3rem; line-height:1.8;
+    font-size:0.9rem; color:{TEXT_BODY} !important;
+}}
+
+.bubble-user {{ display:flex; gap:0.875rem; align-items:flex-start; max-width:84%; margin-left:auto; flex-direction:row-reverse; }}
+.bubble-user-avatar {{
+    width:32px; height:32px; min-width:32px;
+    background:{BG_USER}; border:1px solid {BORDER}; color:{TEXT_SUB};
+    border-radius:4px; flex-shrink:0; margin-top:2px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:10px; font-weight:700; letter-spacing:0.04em;
+}}
+.bubble-user-body {{
+    background:{BG_USER}; border:1px solid {BORDER};
+    border-radius:8px 2px 8px 8px;
+    padding:1rem 1.3rem; line-height:1.8;
+    font-size:0.9rem; color:{TEXT_BODY} !important;
+}}
+.feedback-card {{
+    background:{BG_CARD}; border:1px solid {ACCENT}38;
+    border-radius:6px; padding:1.1rem 1.4rem;
+    margin-top:0.75rem; line-height:1.85;
+    font-size:0.875rem; color:{TEXT_BODY} !important;
+}}
+.feedback-card * {{ color:{TEXT_BODY} !important; }}
+
+/* ── Pills ────────────────────────────────────────────────────── */
+.pill {{
+    display:inline-flex; align-items:center;
+    padding:0.22rem 0.72rem; border-radius:3px;
+    font-size:0.7rem; font-weight:700;
+    letter-spacing:0.07em; margin:0.15rem;
+    border:1px solid; text-transform:uppercase;
+}}
+.pill-green {{ color:{ACCENT};  border-color:{ACCENT}55; background:{ACCENT}18; }}
+.pill-amber {{ color:{WARN};    border-color:{WARN}55;   background:{WARN}18; }}
+.pill-red   {{ color:{DANGER};  border-color:{DANGER}55; background:{DANGER}18; }}
+.pill-blue  {{ color:{INFO};    border-color:{INFO}55;   background:{INFO}18; }}
+
+/* ── Score hero ───────────────────────────────────────────────── */
+.score-hero {{
+    font-family:'Instrument Serif',serif;
+    font-size:5rem; color:{ACCENT}; line-height:1; font-weight:400;
+}}
+.score-label {{
+    font-size:0.62rem; letter-spacing:0.2em; text-transform:uppercase;
+    color:{TEXT_SUB}; margin-top:0.3rem;
+}}
+
+/* ── Progress bar ─────────────────────────────────────────────── */
+.stProgress > div > div > div > div {{
+    background:linear-gradient(90deg,{ACCENT},{INFO}) !important;
+    border-radius:0 !important;
+}}
+.stProgress > div > div {{
+    background:{BORDER} !important; border-radius:0 !important; height:3px !important;
+}}
+
+/* ── Text inputs & textareas ──────────────────────────────────── */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {{
+    background:{BG_INPUT} !important;
+    border:1px solid {BORDER} !important;
+    border-radius:5px !important;
+    color:{TEXT_BODY} !important;
+    font-family:'JetBrains Mono',monospace !important;
+    font-size:13px !important;
+    caret-color:{ACCENT} !important;
+}}
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder {{
+    color:{TEXT_SUB} !important; opacity:1 !important;
+}}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {{
+    border-color:{ACCENT} !important;
+    box-shadow:0 0 0 2px {ACCENT}22 !important;
+    outline:none !important;
+}}
+/* Input labels */
+.stTextInput label, .stTextArea label,
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] span {{
+    color:{TEXT_BODY} !important;
+    font-size:0.8rem !important;
+    font-weight:500 !important;
+}}
+
+/* ── File uploader ────────────────────────────────────────────── */
+[data-testid="stFileUploader"] {{
+    background:{BG_CARD} !important;
+    border-radius:6px !important;
+}}
+[data-testid="stFileUploader"] > div,
+[data-testid="stFileUploaderDropzone"] {{
+    background:{BG_INPUT} !important;
+    border:2px dashed {BORDER_HI} !important;
+    border-radius:6px !important;
+}}
+[data-testid="stFileUploader"] * {{ color:{TEXT_BODY} !important; }}
+[data-testid="stFileUploader"] small {{ color:{TEXT_SUB} !important; }}
+[data-testid="stFileUploaderDropzone"]:hover {{ border-color:{ACCENT} !important; }}
+
+/* ── Selectbox ────────────────────────────────────────────────── */
+[data-baseweb="select"] > div {{
+    background:{BG_INPUT} !important;
+    border-color:{BORDER} !important;
+    color:{TEXT_BODY} !important;
+}}
+[data-baseweb="select"] * {{ color:{TEXT_BODY} !important; }}
+
+/* ── Slider ───────────────────────────────────────────────────── */
+.stSlider > div > div > div > div {{ background:{ACCENT} !important; }}
+[data-testid="stTickBar"] > div {{ color:{TEXT_SUB} !important; }}
+[data-testid="stSliderThumbValue"] {{
+    color:{TEXT_HEAD} !important; background:{BG_CARD} !important;
+    border:1px solid {BORDER} !important;
+}}
+
+/* ── Buttons ──────────────────────────────────────────────────── */
+.stButton > button {{
+    background:{BTN_BG} !important;
+    border:1px solid {BORDER} !important;
+    color:{BTN_TEXT} !important;
+    border-radius:5px !important;
+    font-family:'JetBrains Mono',monospace !important;
+    font-size:12px !important; letter-spacing:0.05em !important;
+    padding:0.55rem 1.1rem !important; font-weight:500 !important;
+    transition:all 0.15s ease !important;
+}}
+.stButton > button:hover {{
+    border-color:{ACCENT} !important;
+    color:{ACCENT} !important;
+    background:{ACCENT}12 !important;
+}}
+.stButton > button:disabled {{
+    opacity:0.4 !important; cursor:not-allowed !important;
+}}
+.btn-primary > button {{
+    background:{ACCENT} !important; border:1px solid {ACCENT} !important;
+    color:{BG} !important; font-weight:700 !important; letter-spacing:0.07em !important;
+}}
+.btn-primary > button:hover {{ opacity:0.88 !important; color:{BG} !important; }}
+.btn-danger > button {{
+    border-color:{DANGER}55 !important; color:{DANGER} !important;
+    background:{BG_CARD} !important;
+}}
+.btn-danger > button:hover {{
+    border-color:{DANGER} !important; background:{DANGER}12 !important; color:{DANGER} !important;
+}}
+
+/* ── Radio buttons ────────────────────────────────────────────── */
+.stRadio > div {{ gap:0.5rem !important; }}
+.stRadio > div > label {{
+    background:{RADIO_BG} !important;
+    border:1px solid {BORDER} !important;
+    border-radius:5px !important;
+    padding:0.7rem 1.1rem !important;
+    color:{TEXT_BODY} !important;
+    cursor:pointer; transition:all 0.15s ease;
+}}
+.stRadio > div > label > div > p,
+.stRadio > div > label span {{
+    color:{TEXT_BODY} !important;
+}}
+.stRadio > div > label:hover {{
+    border-color:{BORDER_HI} !important; color:{TEXT_HEAD} !important;
+}}
+.stRadio > div > label[data-checked="true"],
+.stRadio > div > label[aria-checked="true"] {{
+    border-color:{ACCENT} !important;
+    background:{ACCENT}15 !important;
+    color:{ACCENT} !important;
+}}
+.stRadio > div > label[data-checked="true"] span,
+.stRadio > div > label[aria-checked="true"] span,
+.stRadio > div > label[data-checked="true"] p,
+.stRadio > div > label[aria-checked="true"] p {{
+    color:{ACCENT} !important;
+}}
+/* Radio dot circle */
+.stRadio [data-baseweb="radio"] div[role="radio"] {{
+    border-color:{BORDER_HI} !important;
+}}
+.stRadio [data-baseweb="radio"] div[role="radio"][aria-checked="true"] {{
+    border-color:{ACCENT} !important; background:{ACCENT} !important;
+}}
+
+/* ── Expander ─────────────────────────────────────────────────── */
+[data-testid="stExpander"] {{
+    background:{BG_CARD} !important;
+    border:1px solid {BORDER} !important;
+    border-radius:5px !important;
+}}
+[data-testid="stExpander"] summary {{
+    color:{TEXT_BODY} !important;
+    background:{BG_CARD} !important;
+}}
+[data-testid="stExpander"] summary:hover {{ color:{TEXT_HEAD} !important; }}
+[data-testid="stExpander"] summary svg {{ fill:{TEXT_SUB} !important; }}
+[data-testid="stExpander"] > div {{
+    background:{BG_CARD} !important; color:{TEXT_BODY} !important;
+}}
+
+/* ── Metrics ──────────────────────────────────────────────────── */
+[data-testid="stMetric"] {{ background:{BG_CARD} !important; }}
+[data-testid="stMetricValue"] {{
+    font-family:'Instrument Serif',serif !important;
+    color:{TEXT_HEAD} !important; font-size:2rem !important;
+}}
+[data-testid="stMetricLabel"] {{
+    color:{TEXT_SUB} !important;
+    font-size:0.68rem !important; letter-spacing:0.1em !important;
+    text-transform:uppercase !important;
+}}
+[data-testid="stMetricDelta"] {{ color:{ACCENT} !important; }}
+
+/* ── Alerts (success / error / warning / info) ────────────────── */
+[data-testid="stAlert"] {{
+    background:{BG_CARD} !important;
+    border-radius:5px !important;
+    color:{TEXT_BODY} !important;
+}}
+[data-testid="stAlert"] * {{ color:{TEXT_BODY} !important; }}
+.stSuccess {{ background:{ACCENT}12 !important; border:1px solid {ACCENT}44 !important; }}
+.stError   {{ background:{DANGER}12 !important; border:1px solid {DANGER}44 !important; }}
+.stWarning {{ background:{WARN}12   !important; border:1px solid {WARN}44   !important; }}
+.stInfo    {{ background:{INFO}12   !important; border:1px solid {INFO}44   !important; }}
+
+/* ── Code blocks ──────────────────────────────────────────────── */
+.stCodeBlock, [data-testid="stCodeBlock"] {{
+    background:{BG_CARD} !important;
+    border:1px solid {BORDER} !important;
+    border-radius:5px !important;
+}}
+code, .stCode code {{ color:{ACCENT} !important; font-size:0.82rem !important; }}
+pre, pre code {{ color:{TEXT_BODY} !important; background:{BG_CARD} !important; }}
+
+/* ── Chat input ───────────────────────────────────────────────── */
+[data-testid="stChatInput"],
+[data-testid="stChatInputContainer"] {{
+    background:{BG} !important;
+    border-top:1px solid {BORDER} !important;
+}}
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"] > div {{
+    background:{BG_INPUT} !important;
+    border:1px solid {BORDER} !important;
+    border-radius:5px !important;
+}}
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInputContainer"] textarea {{
+    color:{TEXT_BODY} !important;
+    background:{BG_INPUT} !important;
+    font-family:'JetBrains Mono',monospace !important;
+}}
+[data-testid="stChatInput"] textarea::placeholder {{ color:{TEXT_SUB} !important; }}
+[data-testid="stChatInputSubmitButton"] button {{
+    background:{ACCENT} !important; border:none !important; color:{BG} !important;
+}}
+
+/* ── Spinner ──────────────────────────────────────────────────── */
+.stSpinner > div {{ border-top-color:{ACCENT} !important; }}
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar {{ width:4px; height:4px; }}
+::-webkit-scrollbar-track {{ background:{BG}; }}
+::-webkit-scrollbar-thumb {{ background:{SCROLLBAR}; border-radius:2px; }}
+::-webkit-scrollbar-thumb:hover {{ background:{BORDER_HI}; }}
+
+/* ── Topic card (custom) ──────────────────────────────────────── */
+.topic-card {{
+    background:{BG_CARD}; border:1px solid {BORDER};
+    border-radius:6px; padding:1.5rem 1rem;
+    text-align:center; transition:all 0.2s ease;
+    color:{TEXT_BODY} !important;
+}}
+.topic-card:hover {{ border-color:{ACCENT}; background:{ACCENT}0A; }}
+.topic-number {{
+    font-size:0.58rem; letter-spacing:0.2em; color:{ACCENT};
+    text-transform:uppercase; margin-bottom:0.5rem; font-weight:700;
+}}
+.topic-name {{
+    font-size:0.875rem; font-weight:500;
+    color:{TEXT_HEAD}; line-height:1.4;
+}}
+
+/* ── Logo ─────────────────────────────────────────────────────── */
+.iq-logo {{
+    font-family:'Instrument Serif',serif; font-size:1.05rem;
+    /* base part of name uses logo base token */
+    color:{LOGO_BASE}; letter-spacing:0.02em;
+}}
+.iq-logo span {{ color:{ACCENT}; }}
+
+/* ── Step progress bar ────────────────────────────────────────── */
+.step-bar {{ display:flex; gap:5px; margin-bottom:2.5rem; }}
+.step-dot {{
+    height:3px; flex:1; border-radius:1px;
+    background:{BORDER}; transition:background 0.3s ease;
+}}
+.step-dot.active {{ background:{ACCENT}; }}
+.step-dot.done   {{ background:{STEP_DONE}; }}
+
+/* ── Columns gap fix ──────────────────────────────────────────── */
+[data-testid="column"] {{ background:{BG} !important; }}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# API KEY — .env → st.secrets → hard stop
+# ══════════════════════════════════════════════════════════════════════════════
 api_key = os.environ.get("GEMINI_API_KEY", "")
 if not api_key:
     try:
@@ -427,18 +536,18 @@ if not api_key:
         pass
 
 if not api_key:
-    st.markdown("""
-    <div style="max-width:500px; margin:8rem auto; text-align:center;">
-        <div style="font-family:'Instrument Serif',serif; font-size:2rem; color:#F0F2F7; margin-bottom:1rem;">
-            Missing API Key
-        </div>
-        <div style="color:#4A5568; font-size:0.85rem; line-height:1.8;">
-            Create a <code style="color:#00E5B4">.env</code> file in the project root with:<br><br>
-            <code style="background:#0D1119; border:1px solid #1A2035; padding:0.5rem 1rem; display:inline-block; border-radius:4px; color:#00E5B4;">
-                GEMINI_API_KEY=your_key_here
-            </code><br><br>
-            Then restart the app with <code style="color:#00E5B4">streamlit run app.py</code>
-        </div>
+    st.markdown(f"""
+    <div style="max-width:520px;margin:8rem auto;text-align:center;">
+      <div style="font-family:'Instrument Serif',serif;font-size:2.2rem;
+                  color:{TEXT_HEAD};margin-bottom:1rem;">Missing API Key</div>
+      <div style="color:{TEXT_SUB};font-size:0.85rem;line-height:2.1;">
+        Create a <code style="color:{ACCENT}">.env</code> file in the project root:<br><br>
+        <code style="background:{BG_CARD};border:1px solid {BORDER};padding:0.5rem 1.4rem;
+                     display:inline-block;border-radius:5px;color:{ACCENT};margin-top:0.3rem;">
+          GEMINI_API_KEY=your_key_here
+        </code><br><br>
+        Then restart with <code style="color:{ACCENT}">streamlit run app.py</code>
+      </div>
     </div>
     """, unsafe_allow_html=True)
     st.stop()
@@ -449,21 +558,47 @@ init_gemini(api_key)
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
-
 def step_bar(current: int, total: int = 5):
-    """Render a minimal top step progress indicator."""
-    dots = ""
-    for i in range(1, total + 1):
-        cls = "active" if i == current else ("done" if i < current else "")
-        dots += f'<div class="step-dot {cls}"></div>'
+    dots = "".join(
+        f'<div class="step-dot {"active" if i == current else "done" if i < current else ""}"></div>'
+        for i in range(1, total + 1)
+    )
     st.markdown(f'<div class="step-bar">{dots}</div>', unsafe_allow_html=True)
 
 
-def logo():
-    st.markdown('<div class="iq-logo">Interview<span>IQ</span></div>', unsafe_allow_html=True)
+def topbar():
+    c_logo, _, c_toggle = st.columns([3, 5, 2])
+    with c_logo:
+        st.markdown(
+            f'<div class="iq-logo" style="padding-top:5px;">Interview<span>IQ</span></div>',
+            unsafe_allow_html=True,
+        )
+    with c_toggle:
+        icon = "⚪️  Light" if T == "dark" else "⚫️  Dark"
+        if st.button(icon, key="theme_btn"):
+            st.session_state.theme = "light" if T == "dark" else "dark"
+            st.rerun()
 
 
-STEP_MAP = {"input": 1, "configure": 2, "topics": 3, "interview": 4, "report": 5}
+def sec_label(text: str, color: str = None):
+    st.markdown(
+        f'<div style="font-size:0.62rem;letter-spacing:0.2em;'
+        f'color:{color or TEXT_SUB};text-transform:uppercase;'
+        f'font-weight:700;margin-bottom:0.65rem;">{text}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def sys_prompt_from_state() -> str:
+    return build_system_prompt(
+        company=st.session_state.company,
+        role=st.session_state.role,
+        persona=st.session_state.persona,
+        difficulty=st.session_state.difficulty,
+        resume_text=st.session_state.resume_text,
+        jd=st.session_state.jd,
+        num_questions=st.session_state.num_questions,
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -471,26 +606,26 @@ STEP_MAP = {"input": 1, "configure": 2, "topics": 3, "interview": 4, "report": 5
 # ══════════════════════════════════════════════════════════════════════════════
 if st.session_state.step == "input":
 
-    logo()
+    topbar()
     step_bar(1)
 
-    st.markdown("""
-    <h1 style="font-size:3.2rem; margin-bottom:0.25rem;">
+    st.markdown(f"""
+    <h1 style="font-size:3rem;margin-bottom:0.3rem;">
         Your next role<br><em>starts here.</em>
     </h1>
-    <p style="color:#4A5568; margin-bottom:2.5rem; font-size:0.85rem; letter-spacing:0.02em;">
-        AI mock interviews tailored to your resume and target role.
+    <p style="color:{TEXT_SUB};margin-bottom:2.5rem;font-size:0.85rem;letter-spacing:0.02em;">
+        AI mock interviews — tailored to your resume and target role.
     </p>
     """, unsafe_allow_html=True)
 
-    col_l, spacer, col_r = st.columns([5, 1, 5])
+    col_l, sp, col_r = st.columns([5, 1, 5])
 
     with col_l:
-        st.markdown('<h3 style="margin-bottom:1rem;">01 / Resume</h3>', unsafe_allow_html=True)
+        sec_label("01 / Your Resume")
         resume_file = st.file_uploader(
-            "Upload resume", type=["pdf", "docx"],
-            label_visibility="collapsed",
-            help="PDF or DOCX — text extracted locally, never stored.",
+            "Upload resume (PDF or DOCX)",
+            type=["pdf", "docx"],
+            help="Text extracted locally — never stored.",
         )
         if resume_file:
             resume_text, err = parse_uploaded_file(resume_file)
@@ -499,43 +634,42 @@ if st.session_state.step == "input":
             else:
                 st.session_state.resume_text = resume_text
                 st.markdown(
-                    f'<div class="pill pill-green">✓ {len(resume_text):,} chars extracted</div>',
+                    f'<div class="pill pill-green" style="margin-bottom:0.5rem;">'
+                    f'✓ {len(resume_text):,} chars extracted</div>',
                     unsafe_allow_html=True,
                 )
-                with st.expander("Preview text"):
-                    st.code(resume_text[:600] + ("…" if len(resume_text) > 600 else ""),
-                            language=None)
+                with st.expander("Preview extracted text"):
+                    st.code(
+                        resume_text[:700] + ("…" if len(resume_text) > 700 else ""),
+                        language=None,
+                    )
 
     with col_r:
-        st.markdown('<h3 style="margin-bottom:1rem;">02 / Role</h3>', unsafe_allow_html=True)
+        sec_label("02 / Role Details")
         st.session_state.company = st.text_input(
-            "Company", value=st.session_state.company,
+            "Company name",
+            value=st.session_state.company,
             placeholder="e.g. Google, Stripe, Anthropic…",
-            label_visibility="collapsed",
         )
-        st.caption("Company")
         st.session_state.role = st.text_input(
-            "Role", value=st.session_state.role,
+            "Target role",
+            value=st.session_state.role,
             placeholder="e.g. Senior Backend Engineer, PM…",
-            label_visibility="collapsed",
         )
-        st.caption("Target Role")
         st.session_state.jd = st.text_area(
-            "Job Description", value=st.session_state.jd,
+            "Job description",
+            value=st.session_state.jd,
             placeholder="Paste the full job description here…",
-            height=180, label_visibility="collapsed",
+            height=180,
         )
-        st.caption("Job Description")
 
     st.markdown("<br>", unsafe_allow_html=True)
-
     can_proceed = bool(
         st.session_state.company.strip() and
         st.session_state.role.strip() and
         st.session_state.jd.strip()
     )
-
-    c1, c2, c3 = st.columns([2, 3, 2])
+    _, c2, _ = st.columns([2, 3, 2])
     with c2:
         st.markdown('<div class="btn-primary">', unsafe_allow_html=True)
         if st.button(
@@ -548,8 +682,8 @@ if st.session_state.step == "input":
         st.markdown("</div>", unsafe_allow_html=True)
         if not can_proceed:
             st.markdown(
-                '<p style="text-align:center;color:#4A5568;font-size:0.75rem;margin-top:0.5rem;">'
-                'Company, Role and Job Description are required.</p>',
+                f'<p style="text-align:center;color:{TEXT_SUB};font-size:0.74rem;margin-top:0.5rem;">'
+                f'Company, Role and Job Description are required.</p>',
                 unsafe_allow_html=True,
             )
 
@@ -559,15 +693,15 @@ if st.session_state.step == "input":
 # ══════════════════════════════════════════════════════════════════════════════
 elif st.session_state.step == "configure":
 
-    logo()
+    topbar()
     step_bar(2)
     st.markdown('<h1>Configure<br><em>your session.</em></h1>', unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
 
-    col_a, spacer, col_b = st.columns([5, 1, 5])
+    col_a, sp, col_b = st.columns([5, 1, 5])
 
     with col_a:
-        st.markdown('<h3 style="margin-bottom:1rem;">Difficulty</h3>', unsafe_allow_html=True)
+        sec_label("Difficulty")
         chosen_diff = st.radio(
             "Difficulty", DIFFICULTY_OPTIONS,
             index=DIFFICULTY_OPTIONS.index(st.session_state.difficulty),
@@ -575,13 +709,13 @@ elif st.session_state.step == "configure":
         )
         st.session_state.difficulty = chosen_diff
         st.markdown(
-            f'<div class="iq-card iq-card-accent" style="margin-top:0.75rem">'
-            f'<span style="color:#4A5568;font-size:0.8rem;">{DIFFICULTY_DESCRIPTIONS[chosen_diff]}</span>'
-            f'</div>',
+            f'<div class="iq-card iq-card-accent" style="margin-top:0.75rem;">'
+            f'<span style="color:{TEXT_BODY};font-size:0.83rem;line-height:1.75;">'
+            f'{DIFFICULTY_DESCRIPTIONS[chosen_diff]}</span></div>',
             unsafe_allow_html=True,
         )
-
-        st.markdown('<h3 style="margin:1.5rem 0 0.75rem;">Questions</h3>', unsafe_allow_html=True)
+        st.markdown('<div style="height:1.5rem;"></div>', unsafe_allow_html=True)
+        sec_label("Number of Questions")
         st.session_state.num_questions = st.slider(
             "Questions", min_value=5, max_value=15,
             value=st.session_state.num_questions,
@@ -593,7 +727,7 @@ elif st.session_state.step == "configure":
         )
 
     with col_b:
-        st.markdown('<h3 style="margin-bottom:1rem;">Interviewer Persona</h3>', unsafe_allow_html=True)
+        sec_label("Interviewer Persona")
         chosen_persona = st.radio(
             "Persona", PERSONA_OPTIONS,
             index=PERSONA_OPTIONS.index(st.session_state.persona),
@@ -601,9 +735,9 @@ elif st.session_state.step == "configure":
         )
         st.session_state.persona = chosen_persona
         st.markdown(
-            f'<div class="iq-card iq-card-accent" style="margin-top:0.75rem">'
-            f'<span style="color:#4A5568;font-size:0.8rem;">{PERSONA_DESCRIPTIONS[chosen_persona]}</span>'
-            f'</div>',
+            f'<div class="iq-card iq-card-accent" style="margin-top:0.75rem;">'
+            f'<span style="color:{TEXT_BODY};font-size:0.83rem;line-height:1.75;">'
+            f'{PERSONA_DESCRIPTIONS[chosen_persona]}</span></div>',
             unsafe_allow_html=True,
         )
 
@@ -625,16 +759,7 @@ elif st.session_state.step == "configure":
                     )
                 )
                 st.session_state.topics = topics
-                # ✅ FIX: pass all 7 required args to build_system_prompt
-                st.session_state.system_prompt = build_system_prompt(
-                    company=st.session_state.company,
-                    role=st.session_state.role,
-                    persona=st.session_state.persona,
-                    difficulty=st.session_state.difficulty,
-                    resume_text=st.session_state.resume_text,
-                    jd=st.session_state.jd,
-                    num_questions=st.session_state.num_questions,
-                )
+                st.session_state.system_prompt = sys_prompt_from_state()
                 st.session_state.step = "topics"
                 st.rerun()
         st.markdown("</div>", unsafe_allow_html=True)
@@ -645,11 +770,11 @@ elif st.session_state.step == "configure":
 # ══════════════════════════════════════════════════════════════════════════════
 elif st.session_state.step == "topics":
 
-    logo()
+    topbar()
     step_bar(3)
     st.markdown('<h1>Pick your<br><em>battleground.</em></h1>', unsafe_allow_html=True)
     st.markdown(
-        f'<p style="color:#4A5568;font-size:0.8rem;margin-bottom:2rem;">'
+        f'<p style="color:{TEXT_SUB};font-size:0.83rem;margin-bottom:2rem;">'
         f'{st.session_state.role} · {st.session_state.company} · '
         f'{st.session_state.difficulty} · {st.session_state.persona}</p>',
         unsafe_allow_html=True,
@@ -660,7 +785,7 @@ elif st.session_state.step == "topics":
         with cols[i]:
             st.markdown(
                 f'<div class="topic-card">'
-                f'<div class="topic-number">0{i+1}</div>'
+                f'<div class="topic-number">0{i + 1}</div>'
                 f'<div class="topic-name">{topic}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
@@ -668,16 +793,7 @@ elif st.session_state.step == "topics":
             if st.button("Start →", key=f"topic_{i}", use_container_width=True):
                 reset_interview()
                 st.session_state.current_topic = topic
-                # Re-attach system_prompt (reset_interview clears it)
-                st.session_state.system_prompt = build_system_prompt(
-                    company=st.session_state.company,
-                    role=st.session_state.role,
-                    persona=st.session_state.persona,
-                    difficulty=st.session_state.difficulty,
-                    resume_text=st.session_state.resume_text,
-                    jd=st.session_state.jd,
-                    num_questions=st.session_state.num_questions,
-                )
+                st.session_state.system_prompt = sys_prompt_from_state()
                 st.session_state.step = "interview"
                 st.rerun()
 
@@ -692,22 +808,24 @@ elif st.session_state.step == "topics":
 # ══════════════════════════════════════════════════════════════════════════════
 elif st.session_state.step == "interview":
 
-    # ── Top bar ───────────────────────────────────────────────────────────────
+    # ── Header ────────────────────────────────────────────────────────────────
     hdr_l, hdr_m, hdr_r = st.columns([4, 3, 2])
     with hdr_l:
-        logo()
+        topbar()
         st.markdown(
-            f'<span style="color:#4A5568;font-size:0.75rem;">'
-            f'{st.session_state.current_topic} · {st.session_state.persona} · {st.session_state.difficulty}'
-            f'</span>',
+            f'<span style="color:{TEXT_SUB};font-size:0.74rem;">'
+            f'{st.session_state.current_topic} · {st.session_state.persona} · '
+            f'{st.session_state.difficulty}</span>',
             unsafe_allow_html=True,
         )
     with hdr_m:
         progress = (st.session_state.question_number / st.session_state.num_questions
                     if st.session_state.num_questions else 0)
         st.markdown(
-            f'<div style="font-size:0.7rem;color:#4A5568;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;">'
-            f'Question {st.session_state.question_number} of {st.session_state.num_questions}</div>',
+            f'<div style="font-size:0.68rem;color:{TEXT_SUB};letter-spacing:0.1em;'
+            f'text-transform:uppercase;margin-bottom:5px;">'
+            f'Question {st.session_state.question_number} of {st.session_state.num_questions}'
+            f'</div>',
             unsafe_allow_html=True,
         )
         st.progress(min(progress, 1.0))
@@ -715,16 +833,17 @@ elif st.session_state.step == "interview":
         avg_so_far = (sum(st.session_state.scores) / len(st.session_state.scores)
                       if st.session_state.scores else 0)
         st.markdown(
-            f'<div style="text-align:right;">'
-            f'<span style="font-family:Instrument Serif,serif;font-size:1.6rem;color:#00E5B4;">{avg_so_far:.1f}</span>'
-            f'<span style="color:#4A5568;font-size:0.7rem;"> / 10 avg</span>'
+            f'<div style="text-align:right;padding-top:4px;">'
+            f'<span style="font-family:Instrument Serif,serif;font-size:1.6rem;color:{ACCENT};">'
+            f'{avg_so_far:.1f}</span>'
+            f'<span style="color:{TEXT_SUB};font-size:0.7rem;"> / 10 avg</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
-    st.markdown('<hr style="margin:1rem 0 1.5rem;">', unsafe_allow_html=True)
+    st.markdown(f'<hr style="margin:0.75rem 0 1.5rem;">', unsafe_allow_html=True)
 
-    # ── Generate first question if needed ─────────────────────────────────────
+    # ── Generate first question ───────────────────────────────────────────────
     if len(st.session_state.chat_history) == 0:
         with st.spinner("Preparing your first question…"):
             first_q = generate_first_question(
@@ -741,7 +860,7 @@ elif st.session_state.step == "interview":
             start_answer_timer()
             st.rerun()
 
-    # ── Render chat ───────────────────────────────────────────────────────────
+    # ── Chat history ──────────────────────────────────────────────────────────
     st.markdown('<div class="bubble-wrap">', unsafe_allow_html=True)
     for msg in st.session_state.chat_history:
         if msg["role"] == "assistant":
@@ -755,40 +874,55 @@ elif st.session_state.step == "interview":
         else:
             st.markdown(
                 f'<div class="bubble-user">'
-                f'<div class="bubble-user-avatar">You</div>'
+                f'<div class="bubble-user-avatar">YOU</div>'
                 f'<div class="bubble-user-body">{msg["content"]}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # ── Hint / Skip ───────────────────────────────────────────────────────────
-    hint_col, skip_col, spacer = st.columns([1.4, 1.4, 6])
+    # ── Controls: Hint | Skip ─────────────────────────────────────────────────
+    hint_col, skip_col, _ = st.columns([1.2, 1.2, 5.6])
+
     with hint_col:
         st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
-        hint_clicked = st.button("💡 Hint", key="hint_btn", use_container_width=True,
-                                 help=f"Get a nudge — costs {HINT_PENALTY} pt")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with skip_col:
-        st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
-        skip_clicked = st.button("⏭ Skip", key="skip_btn", use_container_width=True,
-                                 help="Skip this question")
+        hint_clicked = st.button(
+            "💡 Hint", key="hint_btn", use_container_width=True,
+            help=f"Get a nudge — costs {HINT_PENALTY} pt",
+        )
         st.markdown("</div>", unsafe_allow_html=True)
 
+    with skip_col:
+        st.markdown('<div class="btn-danger">', unsafe_allow_html=True)
+        skip_clicked = st.button(
+            "⏭ Skip", key="skip_btn", use_container_width=True,
+            help="Skip this question — tracked in your report",
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── Hint logic ────────────────────────────────────────────────────────────
     if hint_clicked:
         with st.spinner("Generating hint…"):
+            # ✅ FIX: generate_hint takes only hint_prompt — system_prompt
+            #         is already baked into build_hint_prompt via the module.
+            #         Pass just the one string it expects.
             hint_text = generate_hint(
-                build_hint_prompt(st.session_state.current_question, st.session_state.current_topic),
-                st.session_state.system_prompt,
+                build_hint_prompt(
+                    st.session_state.current_question,
+                    st.session_state.current_topic,
+                )
             )
         st.session_state.hints_used += 1
         st.markdown(
             f'<div class="iq-card iq-card-warn">'
-            f'<span style="color:#F5A623;font-size:0.7rem;letter-spacing:0.1em;">HINT</span><br><br>'
-            f'{hint_text}</div>',
+            f'<div style="font-size:0.62rem;letter-spacing:0.18em;color:{WARN};'
+            f'font-weight:700;text-transform:uppercase;margin-bottom:0.5rem;">Hint</div>'
+            f'<div style="color:{TEXT_BODY};font-size:0.875rem;line-height:1.8;">{hint_text}</div>'
+            f'</div>',
             unsafe_allow_html=True,
         )
 
+    # ── Skip logic ────────────────────────────────────────────────────────────
     if skip_clicked:
         elapsed = stop_answer_timer()
         st.session_state.skips_used += 1
@@ -801,7 +935,11 @@ elif st.session_state.step == "interview":
         st.session_state.feedbacks.append("Question skipped.")
         st.session_state.star_results.append({"used_star": None, "missing": []})
         st.session_state.answer_times.append(elapsed)
-        push_chat("user", "<em style='color:#4A5568'>— skipped —</em>")
+        push_chat(
+            "user",
+            f'<span style="color:{TEXT_MUTED};font-style:italic;font-size:0.85rem;">'
+            f'— skipped —</span>',
+        )
 
         if st.session_state.question_number >= st.session_state.num_questions:
             st.session_state.step = "report"
@@ -822,7 +960,7 @@ elif st.session_state.step == "interview":
         st.rerun()
 
     # ── Answer input ──────────────────────────────────────────────────────────
-    user_answer = st.chat_input("Type your answer…")
+    user_answer = st.chat_input("Type your answer here…")
 
     if user_answer:
         elapsed = stop_answer_timer()
@@ -859,7 +997,6 @@ elif st.session_state.step == "interview":
         st.session_state.feedbacks.append(feedback)
         st.session_state.star_results.append(star_info)
 
-        # Build feedback HTML
         score_cls = "pill-green" if score >= 7 else ("pill-amber" if score >= 5 else "pill-red")
         conf_cls  = "pill-green" if local_conf >= 65 else ("pill-amber" if local_conf >= 40 else "pill-red")
 
@@ -868,18 +1005,17 @@ elif st.session_state.step == "interview":
             star_badge = '<span class="pill pill-green">✓ STAR</span>'
         elif star_info.get("used_star") is False:
             missing = ", ".join(star_info.get("missing", []))
-            star_badge = f'<span class="pill pill-amber">⚠ STAR missing: {missing}</span>'
-
-        timer_badge = f'<span class="pill pill-blue">⏱ {elapsed}s</span>'
+            star_badge = f'<span class="pill pill-amber">⚠ STAR: missing {missing}</span>'
 
         feedback_html = (
             f'<div class="feedback-card">'
-            f'<div style="margin-bottom:0.75rem;">'
+            f'<div style="margin-bottom:0.8rem;">'
             f'<span class="pill {score_cls}">Score {score}/10</span>'
             f'<span class="pill {conf_cls}">Confidence {local_conf}%</span>'
-            f'{star_badge}{timer_badge}'
-            f'</div>'
-            f'<div style="color:#8892A4;font-size:0.85rem;line-height:1.8;">{feedback}</div>'
+            f'<span class="pill pill-blue">⏱ {elapsed}s</span>'
+            f'{star_badge}</div>'
+            f'<div style="color:{TEXT_BODY};font-size:0.875rem;line-height:1.85;">'
+            f'{feedback}</div>'
             f'</div>'
         )
 
@@ -891,15 +1027,21 @@ elif st.session_state.step == "interview":
         )
 
         if is_last:
-            push_chat("assistant",
-                      feedback_html +
-                      '<br><div style="color:#00E5B4;font-size:0.85rem;">✓ Interview complete — generating your report.</div>')
+            push_chat(
+                "assistant",
+                feedback_html +
+                f'<br><div style="color:{ACCENT};font-size:0.85rem;margin-top:0.5rem;">'
+                f'✓ Interview complete — generating your report.</div>',
+            )
             st.session_state.step = "report"
         else:
             st.session_state.question_number += 1
-            push_chat("assistant",
-                      feedback_html +
-                      f'<br><div style="margin-top:1rem;color:#D4D9E8;font-weight:500;">{next_q}</div>')
+            push_chat(
+                "assistant",
+                feedback_html +
+                f'<br><div style="margin-top:1.1rem;color:{TEXT_HEAD};'
+                f'font-size:0.9rem;font-weight:500;line-height:1.75;">{next_q}</div>',
+            )
             st.session_state.current_question = next_q
             start_answer_timer()
 
@@ -928,27 +1070,24 @@ elif st.session_state.step == "report":
                 )
             )
 
-    report  = st.session_state.report
-    logo()
+    report   = st.session_state.report
+    topbar()
     step_bar(5)
 
-    # ── Hero ──────────────────────────────────────────────────────────────────
+    grade     = ("Excellent" if overall >= 8 else "Good" if overall >= 6
+                 else "Needs Work" if overall >= 4 else "Keep Practising")
+    grade_col = (ACCENT if overall >= 8 else INFO if overall >= 6
+                 else WARN if overall >= 4 else DANGER)
+    avg_time  = (sum(st.session_state.answer_times) / len(st.session_state.answer_times)
+                 if st.session_state.answer_times else 0)
+
     st.markdown(
-        f'<h1 style="margin-bottom:0.25rem;">Session<br><em>complete.</em></h1>'
-        f'<p style="color:#4A5568;font-size:0.8rem;margin-bottom:2.5rem;">'
-        f'{st.session_state.role} · {st.session_state.company} · {st.session_state.current_topic}</p>',
+        f'<h1 style="margin-bottom:0.3rem;">Session<br><em>complete.</em></h1>'
+        f'<p style="color:{TEXT_SUB};font-size:0.82rem;margin-bottom:2.5rem;">'
+        f'{st.session_state.role} · {st.session_state.company} · '
+        f'{st.session_state.current_topic}</p>',
         unsafe_allow_html=True,
     )
-
-    grade = ("Excellent" if overall >= 8 else
-             "Good" if overall >= 6 else
-             "Needs Work" if overall >= 4 else "Keep Practising")
-    grade_col = ("#00E5B4" if overall >= 8 else
-                 "#6B9FFF" if overall >= 6 else
-                 "#F5A623" if overall >= 4 else "#FF5252")
-
-    avg_time = (sum(st.session_state.answer_times) / len(st.session_state.answer_times)
-                if st.session_state.answer_times else 0)
 
     hero_l, hero_m, hero_r = st.columns([2, 4, 3])
     with hero_l:
@@ -956,31 +1095,35 @@ elif st.session_state.step == "report":
             f'<div class="iq-card" style="text-align:center;padding:2rem 1rem;">'
             f'<div class="score-hero">{overall:.1f}</div>'
             f'<div class="score-label">overall score</div>'
-            f'<div style="margin-top:0.8rem;font-size:0.8rem;color:{grade_col};">{grade}</div>'
+            f'<div style="margin-top:0.8rem;font-size:0.82rem;font-weight:700;'
+            f'color:{grade_col};">{grade}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
     with hero_m:
         st.markdown(
             f'<div class="iq-card" style="height:100%;">'
-            f'<div style="font-size:0.65rem;letter-spacing:0.15em;color:#4A5568;text-transform:uppercase;margin-bottom:0.75rem;">Summary</div>'
-            f'<div style="font-size:0.9rem;line-height:1.8;color:#A8B4CC;">{report.get("summary", "")}</div>'
+            f'<div style="font-size:0.62rem;letter-spacing:0.2em;color:{TEXT_SUB};'
+            f'text-transform:uppercase;font-weight:700;margin-bottom:0.75rem;">Summary</div>'
+            f'<div style="font-size:0.875rem;line-height:1.85;color:{TEXT_BODY};">'
+            f'{report.get("summary", "")}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
     with hero_r:
         st.markdown(
             f'<div class="iq-card" style="height:100%;">'
-            f'<div style="font-size:0.65rem;letter-spacing:0.15em;color:#4A5568;text-transform:uppercase;margin-bottom:0.75rem;">Stats</div>'
-            f'<table style="width:100%;font-size:0.82rem;border-collapse:collapse;">'
-            f'<tr><td style="color:#4A5568;padding:0.3rem 0;">Questions answered</td>'
-            f'<td style="color:#D4D9E8;text-align:right;">{len(st.session_state.scores)}</td></tr>'
-            f'<tr><td style="color:#4A5568;padding:0.3rem 0;">Hints used</td>'
-            f'<td style="color:#D4D9E8;text-align:right;">{st.session_state.hints_used}</td></tr>'
-            f'<tr><td style="color:#4A5568;padding:0.3rem 0;">Skipped</td>'
-            f'<td style="color:#D4D9E8;text-align:right;">{st.session_state.skips_used}</td></tr>'
-            f'<tr><td style="color:#4A5568;padding:0.3rem 0;">Avg answer time</td>'
-            f'<td style="color:#D4D9E8;text-align:right;">{avg_time:.0f}s</td></tr>'
+            f'<div style="font-size:0.62rem;letter-spacing:0.2em;color:{TEXT_SUB};'
+            f'text-transform:uppercase;font-weight:700;margin-bottom:0.75rem;">Session Stats</div>'
+            f'<table style="width:100%;font-size:0.83rem;border-collapse:collapse;">'
+            f'<tr><td style="color:{TEXT_SUB};padding:0.35rem 0;">Questions answered</td>'
+            f'<td style="color:{TEXT_HEAD};text-align:right;font-weight:600;">{len(st.session_state.scores)}</td></tr>'
+            f'<tr><td style="color:{TEXT_SUB};padding:0.35rem 0;">Hints used</td>'
+            f'<td style="color:{TEXT_HEAD};text-align:right;font-weight:600;">{st.session_state.hints_used}</td></tr>'
+            f'<tr><td style="color:{TEXT_SUB};padding:0.35rem 0;">Skipped</td>'
+            f'<td style="color:{TEXT_HEAD};text-align:right;font-weight:600;">{st.session_state.skips_used}</td></tr>'
+            f'<tr><td style="color:{TEXT_SUB};padding:0.35rem 0;">Avg answer time</td>'
+            f'<td style="color:{TEXT_HEAD};text-align:right;font-weight:600;">{avg_time:.0f}s</td></tr>'
             f'</table>'
             f'</div>',
             unsafe_allow_html=True,
@@ -988,25 +1131,26 @@ elif st.session_state.step == "report":
 
     st.markdown('<hr style="margin:2rem 0;">', unsafe_allow_html=True)
 
-    # ── Strengths & Weaknesses ────────────────────────────────────────────────
     sw_l, sw_r = st.columns(2, gap="large")
     with sw_l:
-        st.markdown('<h3 style="margin-bottom:1rem;">Strengths</h3>', unsafe_allow_html=True)
+        sec_label("Strengths", color=ACCENT)
         for s in report.get("strengths", []):
             st.markdown(
                 f'<div class="iq-card iq-card-accent">'
-                f'<span style="color:#00E5B4;font-size:0.7rem;letter-spacing:0.1em;">✦ STRENGTH</span>'
-                f'<div style="margin-top:0.5rem;font-size:0.875rem;color:#C8CDD8;line-height:1.7;">{s}</div>'
+                f'<div style="font-size:0.6rem;letter-spacing:0.18em;color:{ACCENT};'
+                f'font-weight:700;text-transform:uppercase;margin-bottom:0.45rem;">✦ Strength</div>'
+                f'<div style="font-size:0.875rem;color:{TEXT_BODY};line-height:1.8;">{s}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
     with sw_r:
-        st.markdown('<h3 style="margin-bottom:1rem;">Areas to Improve</h3>', unsafe_allow_html=True)
+        sec_label("Areas to Improve", color=DANGER)
         for w in report.get("weak_areas", []):
             st.markdown(
                 f'<div class="iq-card iq-card-danger">'
-                f'<span style="color:#FF5252;font-size:0.7rem;letter-spacing:0.1em;">△ IMPROVE</span>'
-                f'<div style="margin-top:0.5rem;font-size:0.875rem;color:#C8CDD8;line-height:1.7;">{w}</div>'
+                f'<div style="font-size:0.6rem;letter-spacing:0.18em;color:{DANGER};'
+                f'font-weight:700;text-transform:uppercase;margin-bottom:0.45rem;">△ Improve</div>'
+                f'<div style="font-size:0.875rem;color:{TEXT_BODY};line-height:1.8;">{w}</div>'
                 f'</div>',
                 unsafe_allow_html=True,
             )
@@ -1014,15 +1158,16 @@ elif st.session_state.step == "report":
     if report.get("top_tip"):
         st.markdown(
             f'<div class="iq-card iq-card-warn">'
-            f'<span style="color:#F5A623;font-size:0.7rem;letter-spacing:0.1em;">◈ TOP TIP</span>'
-            f'<div style="margin-top:0.5rem;font-size:0.875rem;color:#C8CDD8;line-height:1.7;">{report["top_tip"]}</div>'
+            f'<div style="font-size:0.6rem;letter-spacing:0.18em;color:{WARN};'
+            f'font-weight:700;text-transform:uppercase;margin-bottom:0.45rem;">◈ Top Tip</div>'
+            f'<div style="font-size:0.875rem;color:{TEXT_BODY};line-height:1.8;">'
+            f'{report["top_tip"]}</div>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
     st.markdown('<hr style="margin:2rem 0;">', unsafe_allow_html=True)
 
-    # ── Charts ────────────────────────────────────────────────────────────────
     if st.session_state.scores:
         c1, c2 = st.columns(2, gap="large")
         with c1:
@@ -1039,8 +1184,10 @@ elif st.session_state.step == "report":
             st.plotly_chart(per_question_bar(st.session_state.scores), use_container_width=True)
         with c4:
             if st.session_state.answer_times:
-                st.plotly_chart(answer_time_chart(st.session_state.answer_times),
-                                use_container_width=True)
+                st.plotly_chart(
+                    answer_time_chart(st.session_state.answer_times),
+                    use_container_width=True,
+                )
 
         star_fig = star_donut_chart(st.session_state.star_results)
         if star_fig:
@@ -1050,7 +1197,6 @@ elif st.session_state.step == "report":
 
     st.markdown('<hr style="margin:2rem 0;">', unsafe_allow_html=True)
 
-    # ── Actions ───────────────────────────────────────────────────────────────
     act1, act2, act3 = st.columns(3)
     with act1:
         if st.button("↩ Try Another Topic", use_container_width=True):
