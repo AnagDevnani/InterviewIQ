@@ -7,9 +7,9 @@ st.set_page_config(page_title="AI Interview Pro", page_icon="🤖")
 # --- API SETUP ---
 # In production, use st.secrets["GEMINI_API_KEY"]
 # For local testing, replace 'YOUR_API_KEY' with your actual key
-API_KEY = "YOUR_API_KEY"
+API_KEY = "AIzaSyCGsqXmBzy0Oj3sth4P0fTwUR_dSFuL6Wo"
 genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-3-flash-preview')
 
 # --- SESSION STATE INITIALIZATION ---
 if "step" not in st.session_state:
