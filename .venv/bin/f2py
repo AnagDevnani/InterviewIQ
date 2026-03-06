@@ -1,4 +1,4 @@
-#!/home/bmscecse/Anag/TS100/.venv/bin/python3
+#!/workspaces/TS100/.venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

@@ -41,8 +41,9 @@ import streamlit as st
 import google.generativeai as genai
 
 # Configuration
-genai.configure(api_key="YOUR_GEMINI_API_KEY")
-model = genai.GenerativeModel('gemini-1.5-flash')
+# in your Python code, read from env or secrets
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))  # ensure dotenv has been loaded earlier.  Alternatively use st.secrets in Streamlit.
+model = genai.GenerativeModel('gemini-3-flash-preview')
 
 st.title("🤖 Smart Interview Prep Bot")
 
@@ -92,3 +93,43 @@ if 'topics' in st.session_state:
     Scoring: Ask the AI to provide a "Confidence Score" (1–10) after every user answer to help the user track progress.
 
     STAR Method: Instruct the AI to specifically look for "Situation, Task, Action, Result" in behavioral answers and point out if one is missing.
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------
+
+
+# 🎯 InterviewIQ — AI Mock Interview Coach
+
+An AI-powered mock interview bot built with Streamlit + Gemini API.
+
+## Quick Start
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Add your Gemini API key to `.streamlit/secrets.toml` or paste it in the sidebar.
+
+## Project Structure
+```
+interview-bot/
+├── app.py                  # Main app — all 5 steps
+├── config.py               # Constants + all prompt templates  
+├── requirements.txt
+├── .streamlit/secrets.toml # API key (gitignored)
+└── modules/
+    ├── parser.py           # PDF + DOCX parsing
+    ├── gemini_client.py    # Gemini API wrapper
+    ├── session.py          # Session state helpers
+    └── charts.py           # Plotly dashboard charts
+```
+
+## Features
+- Resume-aware dynamic question generation
+- Difficulty: Easy / Medium / Hard / Auto (AI-calibrated)
+- Personas: Friendly HR / Tough Technical / Stress Interview
+- STAR method detector for behavioural questions
+- Hint + Skip with score penalties
+- Answer timer tracking
+- Full radar chart + score/confidence dashboard
