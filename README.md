@@ -1,94 +1,73 @@
-# InterPrep: Smart Interview Preperation Bot
-## Possible Topic Options
-> selected topic: AI/GenAI
+# InterviewIQ
 
-1. Resume Analyzer using GenAI
-2. Chatbot for College FAQ
-3. AI Code Review Assistant
-4. Fake News Detection
-5. AI-based Email Summarizer
-6. Smart Interview Preperation Bot
-7. AI Bug Detection Tool
-8. AI Meeting Notes Generator
+An AI-powered interview coach built with **Python**, **Streamlit**, and **Gemini 3 Flash**. This bot analyzes specific Job Descriptions (JDs) and company contexts to provide tailored mock interview sessions with real-time feedback.
 
-## Tech Stack
-- Python
-- OpenAI / HuggingFace
-- LangChain
-- Streamlit
+![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/Google%20Gemini-8E75C2?style=for-the-badge&logo=google-gemini&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
-## Work Flow:
-. Setup & API Keys
+---
 
-    Get a Gemini API Key: Go to Google AI Studio. Generate a free API key for the "Gemini 3 Flash" model.
+## Features
 
-    GitHub Repository: Create a new public repository on GitHub (e.g., interview-bot).
+- Resume-aware dynamic question generation
+- Difficulty: Easy / Medium / Hard / Auto (AI-calibrated)
+- Personas: Friendly HR / Tough Technical / Stress Interview
+- STAR method detector for behavioural questions
+- Hint + Skip with score penalties
+- Answer timer tracking
+- Full radar chart + score/confidence dashboard
 
-2. The Logic Design (The "Prompting" Strategy)
 
-To make your bot "smart," you will use two distinct prompt phases:
+## Installation & Local Setup
 
-    Phase 1 (Topic Generation): Send the Job Description (JD) and Company name to the AI. Ask it to return a list of 5–7 key interview categories (e.g., System Design, Behavioral, React Fundamentals).
+To run this project locally, follow these steps:
 
-    Phase 2 (Questioning): Once a user selects a topic, the AI generates a specific question. After the user answers, the AI provides feedback and moves to the next question.
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/your-username/smart-interview-bot.git](https://github.com/your-username/smart-interview-bot.git)
+   cd smart-interview-bot
+2. Install dependencies:
+   ```bash
+    pip install -r requirements.txt
+   ```
+3. Set up your API Key:
+    - Get a free API key from Google AI Studio.
+    - Create a .env file or replace the API_KEY variable in app.py.
 
-3. Coding the Application
+4. Run the application:
+    ```bash
+    streamlit run app.py
+    ```
 
-Create a file named app.py. Your code structure should look like this:
-Python
+## Deployment
 
-import streamlit as st
-import google.generativeai as genai
+This app is optimized for Streamlit Community Cloud.
 
-# Configuration
-genai.configure(api_key="YOUR_GEMINI_API_KEY")
-model = genai.GenerativeModel('gemini-1.5-flash')
+1. Push your code to GitHub.
+2. Connect your repository to Streamlit Cloud.
+3. Add your GEMINI_API_KEY in the Advanced Settings > Secrets section of the Streamlit dashboard:
+   ```Ini, TOML
+    GEMINI_API_KEY = "your_api_key_here"
+   ```
 
-st.title("🤖 Smart Interview Prep Bot")
+## Project Structure
+```
+interview-bot/
+├── app.py                  # Main app — all 5 steps
+├── config.py               # Constants + all prompt templates  
+├── requirements.txt
+├── .streamlit/secrets.toml # API key (gitignored)
+└── modules/
+    ├── parser.py           # PDF + DOCX parsing
+    ├── gemini_client.py    # Gemini API wrapper
+    ├── session.py          # Session state helpers
+    └── charts.py           # Plotly dashboard charts
+```
 
-# Step 1: Input Section
-with st.container():
-    jd = st.text_area("Paste the Job Description:")
-    company = st.text_input("Target Company Name:")
-    
-    if st.button("Analyze Role"):
-        # AI logic to generate topics based on jd and company
-        prompt = f"Based on this JD: {jd} at {company}, list 5 interview topics."
-        response = model.generate_content(prompt)
-        st.session_state.topics = response.text
-        st.write("### Recommended Topics:")
-        st.write(st.session_state.topics)
 
-# Step 2: Interview Loop
-if 'topics' in st.session_state:
-    selected_topic = st.selectbox("Choose a topic to practice:", ["Technical", "Behavioral", "Culture Fit"])
-    if st.button("Start Interview"):
-        # AI logic to ask a question
-        q_prompt = f"Ask a difficult interview question for {selected_topic}."
-        question = model.generate_content(q_prompt)
-        st.subheader(question.text)
-        user_answer = st.text_input("Your Answer:")
+## License
 
-4. Deployment
+Distributed under the MIT License. See `LICENSE` for more information.
 
-    requirements.txt: Create this file in your repo and add:
-    Plaintext
-
-    streamlit
-    google-generativeai
-
-    Connect to Streamlit Cloud:
-
-        Go to share.streamlit.io.
-
-        Connect your GitHub account and select your interview-bot repo.
-
-        Crucial: Add your API Key in the "Advanced Settings" → "Secrets" section of Streamlit so it isn't hardcoded in your public GitHub files.
-
-💡 Pro-Tips for the "Smart" Aspect
-
-    Memory: Use st.session_state to store the chat history so the bot remembers what questions it already asked.
-
-    Scoring: Ask the AI to provide a "Confidence Score" (1–10) after every user answer to help the user track progress.
-
-    STAR Method: Instruct the AI to specifically look for "Situation, Task, Action, Result" in behavioral answers and point out if one is missing.
+Disclaimer: This bot is an AI assistant. While it provides realistic interview practice, users should always research company-specific interview processes via official channels.
