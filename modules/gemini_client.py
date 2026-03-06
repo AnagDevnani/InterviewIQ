@@ -11,16 +11,10 @@ _model = None
 
 
 def init_gemini(api_key: str):
-    """Configure Gemini with the provided API key.
-
-    The application is hard‑wired to use the **gemini-3-flash-preview**
-    model for all calls. Changing the model here is the only place in the
-    codebase where the LLM name is specified.
-    """
+    """Configure Gemini with the provided API key."""
     global _model
     genai.configure(api_key=api_key)
-    # always use the latest flash preview model
-    _model = genai.GenerativeModel("gemini-3-flash-preview")
+    _model = genai.GenerativeModel("gemini-2.5-flash")
 
 
 def _call(prompt: str) -> str:
@@ -88,9 +82,10 @@ def evaluate_answer(eval_prompt: str, system_prompt: str) -> dict:
     return result
 
 
-def generate_hint(hint_prompt: str) -> str:
+def generate_hint(hint_prompt: str, system_prompt: str = "") -> str:
     """Return a hint nudge for the current question."""
-    return _call(hint_prompt)
+    full = f"{system_prompt}\n\n{hint_prompt}" if system_prompt else hint_prompt
+    return _call(full)
 
 
 def generate_report(report_prompt: str) -> dict:
